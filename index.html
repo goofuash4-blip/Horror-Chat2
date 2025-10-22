@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Visitor</title>
+<style>
+  body {
+    margin: 0;
+    height: 100vh;
+    background: radial-gradient(circle at center, #16001c 0%, #000 85%);
+    font-family: 'Segoe UI', sans-serif;
+    color: #ddd;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    transition: background 0.1s;
+  }
+
+  #messages {
+    width: 100%;
+    text-align: center;
+    padding-bottom: 120px;
+    overflow-y: auto;
+    max-height: 80vh;
+  }
+
+  .message {
+    margin: 35px 0;
+    font-size: 1.5rem;
+    color: #b15cff;
+    opacity: 0;
+    animation: fadeIn 0.5s forwards;
+  }
+
+  .user-response {
+    margin: 15px 0;
+    font-size: 1.3rem;
+    color: #8e5eff;
+    opacity: 0;
+    animation: fadeIn 0.5s forwards;
+  }
+
+  @keyframes fadeIn {
+    to { opacity: 1; }
+  }
+
+  .buttons {
+    position: fixed;
+    bottom: 40px;
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    width: 100%;
+  }
+
+  button {
+    background: transparent;
+    border: 1px solid #b15cff;
+    color: #b15cff;
+    padding: 10px 25px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: 0.3s;
+  }
+
+  button:hover {
+    background: #b15cff;
+    color: black;
+  }
+
+  #jumpscare-img {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: none;
+    z-index: 9999;
+  }
+</style>
+</head>
+<body>
+
+<audio id="bg-audio" src="background.mp3" loop></audio>
+<img id="jumpscare-img" src="jumpscare.png" alt="Jump Scare">
+
+<div id="messages"></div>
+<div class="buttons" id="buttons"></div>
+
+<script>
+const messages = document.getElementById('messages');
+const buttons = document.getElementById('buttons');
+const bgAudio = document.getElementById('bg-audio');
+const jumpscareImg = document.getElementById('jumpscare-img');
+
+let musicStarted = false;
+let questionCount = 0;
+let maxQuestions = Math.floor(Math.random() * 8) + 4; // 4–11 questions per session
+
+const scaryQuestions = [
+  "Are you alone right now?",
+  "Do you feel watched?",
+  "Do you hear whispers?",
+  "Are you afraid of the dark?",
+  "Can you feel something behind you?",
+  "Do you like playing with fire?",
+  "Have you ever heard your name when nobody was there?",
+  "Did you lock your door?",
+  "Why did you look away just now?",
+  "Do you sleep with the lights on?",
+  "Have you ever seen a shadow move?",
+  "What’s hiding in your closet?",
+  "Do you check under your bed?",
+  "Have you felt a hand on your shoulder?",
+  "Did something just touch your leg?",
+  "Can you hear footsteps even when alone?",
+  "Do you trust the silence?",
+  "Do you hear breathing when no one is there?",
+  "Do you feel a presence behind you?",
+  "Are the walls closing in?",
+  "Do you hear whispers calling your name?",
+  "Did the lights just flicker?",
+  "Is someone following you?",
+  "Why is the air so cold?",
+  "Do you see shadows in your room?",
+  "Do you think you Have you been watched all along?"
+];
+
+// flicker background effect
+setInterval(() => {
+  if (Math.random() < 0.1) {
+    document.body.style.background = "radial-gradient(circle at center, #1a0025 0%, #000 85%)";
+    setTimeout(() => {
+      document.body.style.background = "radial-gradient(circle at center, #16001c 0%, #000 85%)";
+    }, 80);
+  }
+}, 500);
+
+// play background music on first click
+document.addEventListener('click', () => {
+  if (!musicStarted) {
+    bgAudio.volume = 0.25;
+    bgAudio.play().catch(err => console.log("Autoplay blocked:", err));
+    musicStarted = true;
+  }
+});
+
+// typewriter effect
+function typeWriter(text, callback) {
+  let i = 0;
+  const speed = 60;
+  const msg = document.createElement('div');
+  msg.classList.add('message');
+  messages.appendChild(msg);
+
+  function typing() {
+    if (i < text.length) {
+      msg.textContent += text.charAt(i);
+      i++;
+      messages.scrollTop = messages.scrollHeight;
+      setTimeout(typing, speed);
+    } else if (callback) callback();
+  }
+  typing();
+}
+
+// show buttons
+function showButtons(options) {
+  buttons.innerHTML = '';
+  options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.textContent = opt.text;
+    btn.onclick = () => {
+      showResponse(opt.text);
+      opt.action();
+    };
+    buttons.appendChild(btn);
+  });
+}
+
+// show user response
+function showResponse(text) {
+  const response = document.createElement('div');
+  response.classList.add('user-response');
+  response.textContent = `> ${text}`;
+  messages.appendChild(response);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+// start chat
+function startChat() {
+  typeWriter('Hello', () => {
+    showButtons([{ text: 'hello?', action: firstResponse }]);
+  });
+}
+
+function firstResponse() {
+  buttons.innerHTML = '';
+  typeWriter('Good... you answered.', () => {
+    setTimeout(() => askQuestion(), 1000);
+  });
+}
+
+function askQuestion() {
+  if (questionCount >= maxQuestions) {
+    endChat();
+    return;
+  }
+
+  questionCount++;
+  const question = scaryQuestions[Math.floor(Math.random() * scaryQuestions.length)];
+  typeWriter(question, () => {
+    showButtons([
+      { text: 'Yes', action: () => nextQuestion('yes') },
+      { text: 'No', action: () => nextQuestion('no') }
+    ]);
+  });
+}
+
+function nextQuestion(choice) {
+  buttons.innerHTML = '';
+
+  const response = choice === 'yes' ? "Interesting..." : "Hmm...";
+  typeWriter(response, () => {
+    // 10% chance of random jump-scare after response
+    if (Math.random() < 0.10) {
+      triggerJumpScare();
+    }
+    setTimeout(askQuestion, 1000);
+  });
+}
+
+function endChat() {
+  typeWriter("It's behind you.", () => {
+    setTimeout(() => triggerJumpScare(), 1500);
+  });
+}
+
+// jump-scare function
+function triggerJumpScare() {
+  const jsAudio = new Audio('jumpscare.mp3');
+  jsAudio.play();
+  jumpscareImg.style.display = 'block';
+  setTimeout(() => {
+    jumpscareImg.style.display = 'none';
+  }, 2000);
+}
+
+startChat();
+</script>
+</body>
+</html>
